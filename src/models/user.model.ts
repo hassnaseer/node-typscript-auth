@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import db from '../database';
 import User from '../types/user.type';
 import config from '../config';
+import pool from "../database"
 
 const hashPassword = (password: string) => {
   const salt = parseInt(config.salt as string, 10);
@@ -12,36 +13,38 @@ class UserModel {
   // create
   async create(u: User): Promise<User> {
     try {
-      // open connection with DB
-      const connection = await db.connect();
       const sql = `INSERT INTO users (email, user_name, first_name, last_name, password)
       values ($1, $2, $3, $4, $5) returning id, email, user_name, first_name, last_name`;
       // run query
-      const result = await connection.query(sql, [
+      const find = `SELECT id, email, user_name, first_name, last_name FROM users 
+      WHERE email= ($1)`;
+      const emailCheck = await pool.query(find, [u.email]);
+      if(emailCheck.rows[0]){
+        throw new Error(
+          `User is Already Exist`
+        );
+      }
+      const result = await pool.query(sql, [
         u.email,
         u.user_name,
         u.first_name,
         u.last_name,
         hashPassword(u.password),
       ]);
-      // release connection
-      connection.release();
-      // return created user
       return result.rows[0];
     } catch (error) {
+      console.log(error, "asdasd")
       throw new Error(
-        `Unable to create (${u.user_name}): ${(error as Error).message}`
+        `${(error as Error).message}`
       );
     }
   }
   // get all users
   async getMany(): Promise<User[]> {
     try {
-      const connection = await db.connect();
       const sql =
         'SELECT id, email, user_name, first_name, last_name from users';
-      const result = await connection.query(sql);
-      connection.release();
+      const result = await pool.query(sql);
       return result.rows;
     } catch (error) {
       throw new Error(`Error at retrieving users ${(error as Error).message}`);
@@ -54,11 +57,7 @@ class UserModel {
       const sql = `SELECT id, email, user_name, first_name, last_name FROM users 
       WHERE id=($1)`;
 
-      const connection = await db.connect();
-
-      const result = await connection.query(sql, [id]);
-
-      connection.release();
+      const result = await pool.query(sql, [id]);
       return result.rows[0];
     } catch (error) {
       throw new Error(`Could not find user ${id}, ${(error as Error).message}`);
@@ -68,13 +67,12 @@ class UserModel {
   // update user
   async updateOne(u: User): Promise<User> {
     try {
-      const connection = await db.connect();
       const sql = `UPDATE users 
                   SET email=$1, user_name=$2, first_name=$3, last_name=$4, password=$5 
                   WHERE id=$6 
                   RETURNING id, email, user_name, first_name, last_name`;
 
-      const result = await connection.query(sql, [
+      const result = await pool.query(sql, [
         u.email,
         u.user_name,
         u.first_name,
@@ -82,7 +80,6 @@ class UserModel {
         hashPassword(u.password),
         u.id,
       ]);
-      connection.release();
       return result.rows[0];
     } catch (error) {
       throw new Error(
@@ -94,14 +91,11 @@ class UserModel {
   // delete user
   async deleteOne(id: string): Promise<User> {
     try {
-      const connection = await db.connect();
       const sql = `DELETE FROM users 
                   WHERE id=($1) 
                   RETURNING id, email, user_name, first_name, last_name`;
 
-      const result = await connection.query(sql, [id]);
-
-      connection.release();
+      const result = await pool.query(sql, [id]);
 
       return result.rows[0];
     } catch (error) {
@@ -114,9 +108,8 @@ class UserModel {
   // authenticate user
   async authenticate(email: string, password: string): Promise<User | null> {
     try {
-      const connection = await db.connect();
       const sql = 'SELECT password FROM users WHERE email=$1';
-      const result = await connection.query(sql, [email]);
+      const result = await pool.query(sql, [email]);
       if (result.rows.length) {
         const { password: hashPassword } = result.rows[0];
         const isPasswordValid = bcrypt.compareSync(
@@ -124,14 +117,13 @@ class UserModel {
           hashPassword
         );
         if (isPasswordValid) {
-          const userInfo = await connection.query(
+          const userInfo = await pool.query(
             'SELECT id, email, user_name, first_name, last_name FROM users WHERE email=($1)',
             [email]
           );
           return userInfo.rows[0];
         }
       }
-      connection.release();
       return null;
     } catch (error) {
       throw new Error(`Unable to login: ${(error as Error).message}`);

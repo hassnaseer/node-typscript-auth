@@ -11,10 +11,10 @@ const hashPassword = (password: string) => {
 
 class UserModel {
   /*
-*param string 
+*param User u 
 *It takes values (email, username, first_name, last_name, password )
  in string and insert data into table
-*return string
+*return User
  after adding data into table data will retun in the form of object with the given field
  (id,email, username, first_name, last_name, password )
 */
@@ -46,9 +46,7 @@ class UserModel {
     }
   }
   /*
-*param string 
-* this will use to get all the users
-*return string
+*return User
  It will return all the users data added into table with the given data
  (id,email, username, first_name, last_name, password )
 */
@@ -63,9 +61,9 @@ class UserModel {
     }
   }
   /*
-*param int number
+*param string ID
 * It will take the id in integer format
-*return string
+*return User
  It will return the specific user according to the provided id the given data
  (id,email, username, first_name, last_name, password )
 */
@@ -81,10 +79,10 @@ class UserModel {
   }
 
   /*
-*param int number
+*param User u
 * It will take the id in integer format and takes values (ID, email, username, first_name, last_name, password )
  in string and update data of user according to the given ID
-*return string
+*return User
  It will return the specific user according to the provided id the given data
  (id,email, username, first_name, last_name, password )
 */
@@ -111,7 +109,7 @@ class UserModel {
     }
   }
   /*
-*param int number
+*param string id
 * It will take the id in integer for deleting the user and its data from table accoriding to the given ID,
 * return string
  It will return the success message after deleting the data
@@ -131,10 +129,10 @@ class UserModel {
   }
 
   /*
-*param string
+*param string email, password
 * It will take the data in the form of string the data will be (email, password). this will check the data into table and verify
 * user is available into data
-* return string
+* return User
  After verifing user into table it will return a token related to the given data in the object
 */
   async authenticate(email: string, password: string): Promise<User | null> {
